@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระบบส่งงานนักศึกษา — 09412315 คอมพิวเตอร์และการวิเคราะห์ข้อมูล</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="container navbar-inner">
+      <div class="brand-wrap">
+        <span class="brand-code">09412315</span>
+        <span class="brand-title">ระบบส่งงานนักศึกษา · คอมพิวเตอร์และการวิเคราะห์ข้อมูล</span>
+      </div>
+
+      <div id="nav-user-area" class="nav-user-area hidden">
+        <div class="user-pill">
+          <span id="nav-role-tag" class="role-tag">นักศึกษา</span>
+          <span id="nav-user-name"></span>
+        </div>
+        <button id="btn-refresh" type="button" class="btn btn-outline btn-sm">รีเฟรชข้อมูล</button>
+        <button id="btn-logout" type="button" class="btn btn-danger-outline btn-sm">ออกจากระบบ</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Framed Course Banner -->
+  <section class="banner-wrapper" aria-label="Course Header">
+    <div class="container">
+      <div class="course-banner">
+        <div>
+          <div class="banner-meta">RMUTT 09412315 · ภาคการศึกษา 2/2569</div>
+          <h1 class="banner-title-th">คอมพิวเตอร์และการวิเคราะห์ข้อมูล</h1>
+          <p class="banner-title-en">Computer and Data Analysis — ระบบส่งงานและตรวจให้คะแนนออนไลน์</p>
+        </div>
+        <div class="banner-instructor-box">
+          <div class="banner-instructor-label">อาจารย์ผู้สอน</div>
+          <div class="banner-instructor-name">ผศ.ดร.ศราวุธ ใจเย็น</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Notice if API_URL is not configured yet -->
+    <div id="api-config-warning" class="alert alert-warning hidden">
+      <strong>ยังไม่ได้เชื่อมต่อ Google Apps Script Web App URL:</strong>
+      กรุณาเปิดไฟล์ <code>app.js</code> แล้วนำ Web App URL ที่ได้จากการ Deploy <code>Code.gs</code> มาใส่ในตัวแปร <code>API_URL</code> (ดูขั้นตอนอย่างละเอียดในไฟล์ <code>README.md</code>)
+    </div>
+
+    <!-- ==================== VIEW 1: LOGIN ==================== -->
+    <section id="view-login" class="login-shell">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">เข้าสู่ระบบส่งงาน</h2>
+            <p class="card-subtitle">เลือกประเภทผู้ใช้งานและกรอก Username / Password</p>
+          </div>
+        </div>
+
+        <div class="role-tabs" role="tablist">
+          <button type="button" class="role-tab active" data-login-role="student" role="tab" aria-selected="true">
+            นักศึกษา
+          </button>
+          <button type="button" class="role-tab" data-login-role="teacher" role="tab" aria-selected="false">
+            อาจารย์ผู้สอน
+          </button>
+        </div>
+
+        <div id="login-error" class="alert alert-error hidden"></div>
+
+        <form id="login-form" autocomplete="on">
+          <div class="form-group">
+            <label for="login-username" class="form-label">Username</label>
+            <input
+              id="login-username"
+              type="text"
+              class="form-control"
+              placeholder="กรอก Username ของนักศึกษา"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="login-password" class="form-label">Password</label>
+            <input
+              id="login-password"
+              type="password"
+              class="form-control"
+              placeholder="กรอกรหัสผ่าน"
+              required
+            />
+          </div>
+
+          <button id="btn-login-submit" type="submit" class="btn btn-navy btn-block">
+            เข้าสู่ระบบ (นักศึกษา)
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: STUDENT DASHBOARD ==================== -->
+    <section id="view-student" class="hidden">
+      <!-- Student Info + Stats -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">ข้อมูลนักศึกษาและภาพรวมการส่งงาน</h2>
+            <p class="card-subtitle">ตรวจสอบสถานะงานที่ได้รับมอบหมาย อัปโหลดไฟล์ และติดตามผลคะแนน</p>
+          </div>
+        </div>
+
+        <div class="student-info-grid">
+          <div class="info-tile">
+            <div class="info-tile-label">รหัสนักศึกษา</div>
+            <div id="stu-profile-id" class="info-tile-value">-</div>
+          </div>
+          <div class="info-tile">
+            <div class="info-tile-label">ชื่อ - นามสกุล</div>
+            <div id="stu-profile-name" class="info-tile-value">-</div>
+          </div>
+        </div>
+
+        <div id="stu-stats-grid" class="stats-grid"></div>
+      </div>
+
+      <!-- Assignment List -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">รายการงานทั้งหมด</h2>
+            <p class="card-subtitle">
+              รองรับไฟล์ .pdf, .docx, .xlsx, .pptx, .zip และไฟล์ภาพ (ขนาดไม่เกิน 20 MB) · ส่งแก้ไขทับไฟล์เดิมได้ก่อนอาจารย์ตรวจ
+            </p>
+          </div>
+        </div>
+        <div id="stu-assignment-list" class="assignment-list"></div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: TEACHER DASHBOARD ==================== -->
+    <section id="view-teacher" class="hidden">
+      <!-- Summary Stats -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">แผงควบคุมอาจารย์ผู้สอน</h2>
+            <p class="card-subtitle">ตรวจให้คะแนนงาน เพิ่ม/แก้ไขรายการงาน และตรวจสอบตารางคะแนนรวมทั้งห้อง</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a id="teacher-drive-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-sky btn-sm hidden">
+              เปิดโฟลเดอร์ Google Drive
+            </a>
+            <button id="btn-open-add-assignment" type="button" class="btn btn-primary btn-sm">
+              + เพิ่มงานใหม่
+            </button>
+          </div>
+        </div>
+        <div id="teacher-stats-grid" class="stats-grid"></div>
+      </div>
+
+      <!-- Teacher Sub-tabs -->
+      <div class="nav-tabs" role="tablist">
+        <button type="button" class="nav-tab-btn active" data-teacher-tab="grading">
+          ตรวจงานและให้คะแนน
+        </button>
+        <button type="button" class="nav-tab-btn" data-teacher-tab="assignments">
+          จัดการงาน (เพิ่ม / แก้ไข / ปิดรับ)
+        </button>
+        <button type="button" class="nav-tab-btn" data-teacher-tab="scorebook">
+          ตารางสรุปคะแนนรวมทั้งห้อง
+        </button>
+      </div>
+
+      <!-- Tab 1: Grading -->
+      <div id="teacher-panel-grading" class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">ตรวจงานและให้คะแนนนักศึกษา</h2>
+            <p class="card-subtitle">คลิกเปิดดูไฟล์งาน กรอกคะแนนและข้อเสนอแนะ แล้วกดบันทึกได้ทันที</p>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <select id="filter-assignment" class="form-control" aria-label="เลือกงาน"></select>
+          <select id="filter-status" class="form-control" aria-label="กรองตามสถานะ">
+            <option value="all">สถานะทั้งหมด</option>
+            <option value="submitted">ส่งแล้ว (รอตรวจ)</option>
+            <option value="graded">ตรวจแล้ว</option>
+            <option value="late">ส่งช้า</option>
+            <option value="pending">ยังไม่ส่ง</option>
+          </select>
+          <input
+            id="filter-search"
+            type="text"
+            class="form-control search-input"
+            placeholder="ค้นหารหัสนักศึกษา หรือ ชื่อ-นามสกุล..."
+          />
+        </div>
+
+        <div id="teacher-grading-table-wrap" class="table-wrap"></div>
+      </div>
+
+      <!-- Tab 2: Manage Assignments -->
+      <div id="teacher-panel-assignments" class="card hidden">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">จัดการรายการงาน</h2>
+            <p class="card-subtitle">เมื่อเพิ่มงานใหม่ ระบบจะสร้างโฟลเดอร์ย่อยตามรหัสงานใน Google Drive ให้อัตโนมัติ</p>
+          </div>
+          <button id="btn-open-add-assignment-2" type="button" class="btn btn-primary btn-sm">
+            + เพิ่มงานใหม่
+          </button>
+        </div>
+
+        <div id="teacher-assignments-table-wrap" class="table-wrap"></div>
+      </div>
+
+      <!-- Tab 3: Class Scorebook -->
+      <div id="teacher-panel-scorebook" class="card hidden">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">ตารางสรุปคะแนนรวมทั้งห้อง</h2>
+            <p class="card-subtitle">แสดงคะแนนรายบุคคลครบทุกงานพร้อมคะแนนรวมและร้อยละ</p>
+          </div>
+          <button id="btn-export-csv" type="button" class="btn btn-navy btn-sm">
+            ดาวน์โหลด CSV (เปิดใน Excel)
+          </button>
+        </div>
+
+        <div id="teacher-scorebook-table-wrap" class="table-wrap"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <strong>09412315 คอมพิวเตอร์และการวิเคราะห์ข้อมูล (Computer and Data Analysis)</strong> · ภาคการศึกษา 2/2569<br />
+      ผู้สอน: ผศ.ดร.ศราวุธ ใจเย็น
+    </div>
+  </footer>
+
+  <!-- ==================== MODAL 1: STUDENT UPLOAD ==================== -->
+  <div id="modal-upload" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-upload-title">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-upload-title" class="modal-title">ส่งไฟล์งาน</h3>
+        <button type="button" class="modal-close" data-close-modal="modal-upload" aria-label="ปิด">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="upload-assignment-summary" class="alert alert-info"></div>
+        <div id="upload-replace-notice" class="alert alert-warning hidden">
+          <strong>การส่งแก้ไขทับไฟล์เดิม:</strong> เมื่ออัปโหลดไฟล์ใหม่สำเร็จ ระบบจะย้ายไฟล์เก่าลงถังขยะ (Trash) ใน Google Drive ให้อัตโนมัติ
+        </div>
+        <div id="upload-late-notice" class="alert alert-error hidden">
+          <strong>เลยกำหนดส่ง (Deadline) แล้ว:</strong> การส่งงานครั้งนี้จะถูกบันทึกสถานะเป็น <strong>ส่งช้า</strong>
+        </div>
+
+        <div id="upload-dropzone" class="dropzone">
+          <div class="dropzone-title">คลิกเพื่อเลือกไฟล์ หรือ ลากไฟล์มาวางที่นี่</div>
+          <div class="dropzone-sub">รองรับ .pdf, .docx, .xlsx, .pptx, .zip และไฟล์ภาพ (ไม่เกิน 20 MB)</div>
+          <input
+            id="upload-file-input"
+            type="file"
+            class="hidden"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.png,.jpg,.jpeg,.gif,.webp"
+          />
+        </div>
+
+        <div id="upload-file-preview" class="file-preview-box hidden"></div>
+        <div id="upload-error" class="alert alert-error hidden" style="margin-top:12px; margin-bottom:0;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close-modal="modal-upload">ยกเลิก</button>
+        <button id="btn-confirm-upload" type="button" class="btn btn-primary" disabled>ยืนยันการส่งงาน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 2: ADD / EDIT ASSIGNMENT ==================== -->
+  <div id="modal-assignment" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-assignment-title">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-assignment-title" class="modal-title">เพิ่มงานใหม่</h3>
+        <button type="button" class="modal-close" data-close-modal="modal-assignment" aria-label="ปิด">&times;</button>
+      </div>
+      <form id="assignment-form">
+        <div class="modal-body">
+          <div id="assignment-form-error" class="alert alert-error hidden"></div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="asg-id" class="form-label">รหัสงาน *</label>
+              <input id="asg-id" type="text" class="form-control" placeholder="เช่น งาน-04" required />
+              <div class="form-hint">ใช้เป็นชื่อโฟลเดอร์ย่อยและคำนำหน้าไฟล์</div>
+            </div>
+            <div class="form-group">
+              <label for="asg-max-score" class="form-label">คะแนนเต็ม *</label>
+              <input id="asg-max-score" type="number" min="1" step="0.5" class="form-control" placeholder="10" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="asg-title" class="form-label">หัวข้องาน *</label>
+            <input id="asg-title" type="text" class="form-control" placeholder="ระบุชื่องาน" required />
+          </div>
+
+          <div class="form-group">
+            <label for="asg-desc" class="form-label">คำอธิบาย / คำชี้แจง</label>
+            <textarea id="asg-desc" class="form-control" placeholder="รายละเอียดงานและคำแนะนำในการส่งไฟล์"></textarea>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="asg-deadline" class="form-label">วัน-เวลาครบกำหนดส่ง (Deadline) *</label>
+              <input id="asg-deadline" type="datetime-local" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label for="asg-status" class="form-label">สถานะการรับส่งงาน</label>
+              <select id="asg-status" class="form-control">
+                <option value="open">เปิดรับงาน</option>
+                <option value="closed">ปิดรับงาน</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-close-modal="modal-assignment">ยกเลิก</button>
+          <button id="btn-save-assignment" type="submit" class="btn btn-primary">บันทึกงาน</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 3: GRADE SUBMISSION ==================== -->
+  <div id="modal-grade" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-grade-title">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-grade-title" class="modal-title">ตรวจงานและให้คะแนน</h3>
+        <button type="button" class="modal-close" data-close-modal="modal-grade" aria-label="ปิด">&times;</button>
+      </div>
+      <form id="grade-form">
+        <div class="modal-body">
+          <div id="grade-modal-info" class="alert alert-info"></div>
+          <div id="grade-modal-error" class="alert alert-error hidden"></div>
+
+          <div class="form-group">
+            <label for="grade-score-input" class="form-label">คะแนนที่ได้ (<span id="grade-max-label">เต็ม 10</span>) *</label>
+            <input id="grade-score-input" type="number" min="0" step="0.5" class="form-control" required />
+          </div>
+
+          <div class="form-group">
+            <label for="grade-feedback-input" class="form-label">ข้อเสนอแนะจากอาจารย์ (Comment / Feedback)</label>
+            <textarea
+              id="grade-feedback-input"
+              class="form-control"
+              placeholder="กรอกข้อเสนอแนะเพิ่มเติมให้นักศึกษาเห็นคู่กับคะแนน (ไม่บังคับ)"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-close-modal="modal-grade">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary">บันทึกคะแนน</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay hidden" aria-live="polite">
+    <div class="spinner"></div>
+    <div id="loading-text" class="loading-text">กำลังประมวลผล...</div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
